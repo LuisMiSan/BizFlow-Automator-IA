@@ -1,15 +1,24 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
-import { chatWithBot } from '../services/geminiService';
-import { ChatBubbleIcon, CloseIcon, SendIcon, BotIcon } from './icons';
+import { chatWithBot, resetChat } from '../services/geminiService';
+import { ChatBubbleIcon, CloseIcon, SendIcon, BotIcon, TrashIcon } from './icons';
 import { LoadingSpinner } from './LoadingSpinner';
 
 export const ChatBot: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState<ChatMessage[]>([
-        { role: 'model', content: '¡Hola! Soy tu asistente de IA. ¿Cómo puedo ayudarte hoy?' }
-    ]);
+    const [messages, setMessages] = useState<ChatMessage[]>(() => {
+        const saved = localStorage.getItem('chat_history');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error("Error parsing chat history", e);
+            }
+        }
+        return [{ role: 'model', content: '¡Hola! Soy tu asistente de IA. ¿Cómo puedo ayudarte hoy?' }];
+    });
+    
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -19,6 +28,10 @@ export const ChatBot: React.FC = () => {
     };
 
     useEffect(scrollToBottom, [messages, isOpen]);
+
+    useEffect(() => {
+        localStorage.setItem('chat_history', JSON.stringify(messages));
+    }, [messages]);
 
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
@@ -38,6 +51,13 @@ export const ChatBot: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleClearChat = () => {
+        const initialMsg: ChatMessage = { role: 'model', content: '¡Hola! Soy tu asistente de IA. ¿Cómo puedo ayudarte hoy?' };
+        setMessages([initialMsg]);
+        resetChat();
+        localStorage.removeItem('chat_history');
     };
     
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -59,10 +79,19 @@ export const ChatBot: React.FC = () => {
 
             <div className={`fixed bottom-6 right-6 w-[calc(100%-3rem)] max-w-sm h-[70vh] max-h-[600px] bg-gray-800 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-in-out z-50 border border-gray-700 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
                 <header className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800/70 backdrop-blur-sm rounded-t-2xl">
-                    <h3 className="font-bold text-lg">Asistente IA</h3>
-                    <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white">
-                        <CloseIcon className="w-6 h-6" />
-                    </button>
+                    <h3 className="font-bold text-lg text-white">Asistente IA</h3>
+                    <div className="flex items-center space-x-2">
+                        <button 
+                            onClick={handleClearChat} 
+                            className="text-gray-400 hover:text-red-400 p-1 rounded-full hover:bg-gray-700/50 transition-colors"
+                            title="Borrar historial"
+                        >
+                            <TrashIcon className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-700/50 transition-colors">
+                            <CloseIcon className="w-6 h-6" />
+                        </button>
+                    </div>
                 </header>
                 
                 <div className="flex-1 p-4 overflow-y-auto space-y-4">
@@ -86,7 +115,7 @@ export const ChatBot: React.FC = () => {
                 </div>
                 
                 <footer className="p-4 border-t border-gray-700">
-                    <div className="flex items-center bg-gray-900 rounded-full">
+                    <div className="flex items-center bg-gray-900 rounded-full border border-gray-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500 transition-all">
                         <input
                             type="text"
                             value={input}

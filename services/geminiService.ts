@@ -91,3 +91,7 @@ export const chatWithBot = async (history: ChatMessage[], newMessage: string): P
         throw new Error("Failed to get chat response from Gemini API.");
     }
 };
+
+export const resetChat = () => {
+    chat = null;
+};

@@ -8,7 +8,7 @@ export const Header: React.FC = () => {
             <div className="container mx-auto px-4 py-4 flex items-center">
                 <BotIcon className="w-8 h-8 text-cyan-400 mr-3" />
                 <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-                    Asistente de Automatización de Negocios
+                    BizFlow Automator IA
                 </h1>
             </div>
         </header>

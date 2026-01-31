@@ -12,12 +12,19 @@ export interface Plan {
     roi: PlanSection;
 }
 
-export interface ChatMessage {
-    role: 'user' | 'model';
-    content: string;
-}
-
 export interface GroundingSource {
     uri: string;
     title: string;
+}
+
+export interface SavedPlan extends Plan {
+    id: string;
+    createdAt: number;
+    businessDescription: string;
+    sources: GroundingSource[];
+}
+
+export interface ChatMessage {
+    role: 'user' | 'model';
+    content: string;
 }
