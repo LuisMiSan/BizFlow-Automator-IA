@@ -4,8 +4,10 @@ import type { ChatMessage } from '../types';
 import { chatWithBot, resetChat } from '../services/geminiService';
 import { ChatBubbleIcon, CloseIcon, SendIcon, BotIcon, TrashIcon } from './icons';
 import { LoadingSpinner } from './LoadingSpinner';
+import { useLanguage } from '../context/LanguageContext';
 
 export const ChatBot: React.FC = () => {
+    const { t, language } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>(() => {
         const saved = localStorage.getItem('chat_history');
@@ -16,7 +18,7 @@ export const ChatBot: React.FC = () => {
                 console.error("Error parsing chat history", e);
             }
         }
-        return [{ role: 'model', content: '¡Hola! Soy tu asistente de IA. ¿Cómo puedo ayudarte hoy?' }];
+        return [{ role: 'model', content: t('chat_welcome') }];
     });
     
     const [input, setInput] = useState('');
@@ -42,11 +44,11 @@ export const ChatBot: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const botResponse = await chatWithBot(messages, input);
+            const botResponse = await chatWithBot(messages, input, language);
             const modelMessage: ChatMessage = { role: 'model', content: botResponse };
             setMessages(prev => [...prev, modelMessage]);
         } catch (error) {
-            const errorMessage: ChatMessage = { role: 'model', content: 'Lo siento, ocurrió un error. Por favor intenta de nuevo.' };
+            const errorMessage: ChatMessage = { role: 'model', content: t('error_description') };
             setMessages(prev => [...prev, errorMessage]);
         } finally {
             setIsLoading(false);
@@ -54,7 +56,7 @@ export const ChatBot: React.FC = () => {
     };
 
     const handleClearChat = () => {
-        const initialMsg: ChatMessage = { role: 'model', content: '¡Hola! Soy tu asistente de IA. ¿Cómo puedo ayudarte hoy?' };
+        const initialMsg: ChatMessage = { role: 'model', content: t('chat_welcome') };
         setMessages([initialMsg]);
         resetChat();
         localStorage.removeItem('chat_history');
@@ -72,19 +74,19 @@ export const ChatBot: React.FC = () => {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`fixed bottom-6 right-6 w-16 h-16 rounded-full bg-cyan-600 text-white shadow-lg hover:bg-cyan-500 transition-all transform hover:scale-110 flex items-center justify-center z-50 ${isOpen ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}`}
-                aria-label="Abrir chat"
+                aria-label={t('chat_title')}
             >
                 <ChatBubbleIcon className="w-8 h-8" />
             </button>
 
             <div className={`fixed bottom-6 right-6 w-[calc(100%-3rem)] max-w-sm h-[70vh] max-h-[600px] bg-gray-800 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-in-out z-50 border border-gray-700 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
                 <header className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800/70 backdrop-blur-sm rounded-t-2xl">
-                    <h3 className="font-bold text-lg text-white">Asistente IA</h3>
+                    <h3 className="font-bold text-lg text-white">{t('chat_title')}</h3>
                     <div className="flex items-center space-x-2">
                         <button 
                             onClick={handleClearChat} 
                             className="text-gray-400 hover:text-red-400 p-1 rounded-full hover:bg-gray-700/50 transition-colors"
-                            title="Borrar historial"
+                            title={t('purge_record')}
                         >
                             <TrashIcon className="w-5 h-5" />
                         </button>
@@ -121,7 +123,7 @@ export const ChatBot: React.FC = () => {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyPress={handleKeyPress}
-                            placeholder="Escribe un mensaje..."
+                            placeholder={t('chat_placeholder')}
                             className="flex-1 bg-transparent px-4 py-2 text-white placeholder-gray-500 focus:outline-none"
                             disabled={isLoading}
                         />

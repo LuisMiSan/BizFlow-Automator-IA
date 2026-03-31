@@ -7,8 +7,10 @@ import { PlanLibrary } from './components/PlanLibrary';
 import { ChatBot } from './components/ChatBot';
 import { generateAutomationPlan } from './services/geminiService';
 import type { Plan, SavedPlan } from './types';
+import { useLanguage } from './context/LanguageContext';
 
 const App: React.FC = () => {
+    const { t, language } = useLanguage();
     const [savedPlans, setSavedPlans] = useState<SavedPlan[]>(() => {
         const saved = localStorage.getItem('bizflow_plans');
         return saved ? JSON.parse(saved) : [];
@@ -24,14 +26,14 @@ const App: React.FC = () => {
 
     const handleGeneratePlan = useCallback(async (businessDescription: string) => {
         if (!businessDescription.trim()) {
-            setError("Por favor, describe tu negocio.");
+            setError(t('input_error'));
             return;
         }
         setIsLoading(true);
         setError(null);
 
         try {
-            const result = await generateAutomationPlan(businessDescription);
+            const result = await generateAutomationPlan(businessDescription, language);
             
             // Basic parsing of the response text into sections
             const sections = result.planText.split(/#{2,3}\s*\d+\.\s*/);
@@ -39,21 +41,23 @@ const App: React.FC = () => {
 
             let parsedPlan: Plan;
 
-            if (sections.length > 5) {
+            if (sections.length > 6) {
                  parsedPlan = {
-                    analysis: { title: titles[0]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || 'Análisis de Procesos Manuales', content: sections[1] },
-                    flows: { title: titles[1]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || 'Diseño de Flujos de Agentes', content: sections[2] },
-                    stack: { title: titles[2]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || 'Stack Tecnológico Recomendado', content: sections[3] },
-                    implementation: { title: titles[3]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || 'Implementación Paso a Paso', content: sections[4] },
-                    roi: { title: titles[4]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || 'ROI Estimado', content: sections[5] },
+                    analysis: { title: titles[0]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || t('analysis_step'), content: sections[1] },
+                    flows: { title: titles[1]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || t('architecture_step'), content: sections[2] },
+                    stack: { title: titles[2]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || t('projection_step'), content: sections[3] },
+                    implementation: { title: titles[3]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || t('implementation_plan_title'), content: sections[4] },
+                    roi: { title: titles[4]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || t('roi_estimated'), content: sections[5] },
+                    expenses: { title: titles[5]?.replace(/#{2,3}\s*\d+\.\s*/, '').trim() || t('expense_estimation'), content: sections[6] },
                 };
             } else {
                 parsedPlan = {
-                    analysis: { title: 'Plan de Automatización', content: result.planText },
+                    analysis: { title: t('automation_plan_title'), content: result.planText },
                     flows: { title: '', content: '' },
                     stack: { title: '', content: '' },
                     implementation: { title: '', content: '' },
                     roi: { title: '', content: '' },
+                    expenses: { title: '', content: '' },
                 };
             }
 
@@ -62,6 +66,8 @@ const App: React.FC = () => {
                 id: crypto.randomUUID(),
                 createdAt: Date.now(),
                 businessDescription: businessDescription,
+                niche: result.niche,
+                solutionType: result.solutionType,
                 sources: result.sources || []
             };
 
@@ -71,11 +77,11 @@ const App: React.FC = () => {
 
         } catch (err) {
             console.error("Error generating plan:", err);
-            setError("Hubo un error al generar el plan. Por favor, inténtalo de nuevo.");
+            setError(t('error_description'));
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [language, t]);
 
     const handleUpdatePlan = (updatedPlan: SavedPlan) => {
         setSavedPlans(prev => prev.map(p => p.id === updatedPlan.id ? updatedPlan : p));
@@ -84,7 +90,7 @@ const App: React.FC = () => {
 
     const handleDeletePlan = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (window.confirm('¿Estás seguro de que quieres eliminar este plan?')) {
+        if (window.confirm(t('confirm_delete'))) {
             setSavedPlans(prev => prev.filter(p => p.id !== id));
             if (currentPlan?.id === id) {
                 setCurrentPlan(null);
@@ -104,57 +110,46 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-100 font-sans flex flex-col">
+        <div className="flex flex-col h-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-cyan-500/30">
             <Header />
-            <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar - Hidden on mobile by default (implied simple responsive behavior) */}
-                <div className="hidden md:block h-full">
-                     <PlanLibrary 
-                        plans={savedPlans}
-                        currentPlanId={currentPlan?.id || null}
-                        onSelectPlan={handleSelectPlan}
-                        onDeletePlan={handleDeletePlan}
-                        onNewPlan={handleNewPlanClick}
-                    />
+            
+            <main className="flex flex-1 overflow-hidden relative">
+                {/* Background Grid Pattern */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
+                     style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }}>
                 </div>
-               
-                <main className="flex-1 overflow-y-auto p-4 md:p-8">
-                    {/* Mobile library toggle logic could go here, for now relying on desktop sidebar */}
-                    
-                    {isGeneratingNew ? (
-                         <>
-                            <div className="max-w-4xl mx-auto">
-                                <BusinessInput onGenerate={handleGeneratePlan} isLoading={isLoading} />
-                                {error && (
-                                    <div className="mt-6 bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-center">
-                                        {error}
-                                    </div>
-                                )}
-                                {isLoading && (
-                                     <div className="mt-8 flex flex-col items-center justify-center">
-                                        <AutomationPlan plan={null} sources={[]} isLoading={true} onUpdatePlan={() => {}} />
-                                    </div>
-                                )}
+
+                <PlanLibrary 
+                    plans={savedPlans} 
+                    onSelectPlan={handleSelectPlan}
+                    onDeletePlan={handleDeletePlan}
+                    onNewPlan={handleNewPlanClick}
+                    currentPlanId={currentPlan?.id || null}
+                />
+                
+                <div className="flex-1 overflow-y-auto relative custom-scrollbar bg-[#050505]">
+                    <div className="relative z-10 p-4 md:p-12">
+                        {error && (
+                            <div className="max-w-2xl mx-auto mb-12 p-6 border border-red-500/20 bg-red-500/5 text-red-400 font-mono text-xs uppercase tracking-widest flex items-center gap-4">
+                                <div className="w-2 h-2 bg-red-500 animate-pulse"></div>
+                                System_Error: {error}
                             </div>
-                         </>
-                    ) : (
-                        <div className="max-w-4xl mx-auto">
-                            <button 
-                                onClick={handleNewPlanClick}
-                                className="md:hidden mb-4 text-cyan-400 text-sm flex items-center"
-                            >
-                                &larr; Volver a generar
-                            </button>
-                            <AutomationPlan 
-                                plan={currentPlan}
-                                sources={currentPlan?.sources || []}
-                                isLoading={isLoading}
-                                onUpdatePlan={handleUpdatePlan}
-                            />
-                        </div>
-                    )}
-                </main>
-            </div>
+                        )}
+                        
+                        {isGeneratingNew ? (
+                            <BusinessInput onGenerate={handleGeneratePlan} isLoading={isLoading} />
+                        ) : (
+                            <div className="max-w-5xl mx-auto">
+                                <AutomationPlan 
+                                    plan={currentPlan}
+                                    isLoading={isLoading}
+                                    onUpdatePlan={handleUpdatePlan}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </main>
             <ChatBot />
         </div>
     );

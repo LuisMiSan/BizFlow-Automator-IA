@@ -10,6 +10,7 @@ export interface Plan {
     stack: PlanSection;
     implementation: PlanSection;
     roi: PlanSection;
+    expenses: PlanSection;
 }
 
 export interface GroundingSource {
@@ -21,6 +22,8 @@ export interface SavedPlan extends Plan {
     id: string;
     createdAt: number;
     businessDescription: string;
+    niche: string;
+    solutionType: string;
     sources: GroundingSource[];
 }
 
